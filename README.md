@@ -20,3 +20,10 @@
 Position in queue: 4019
 Estimated time: 202 min
 ```
+
+
+### Installation
+
+```
+apt-get install tesseract-ocr imagemagick
+```

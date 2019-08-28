@@ -1,0 +1,10 @@
+{
+  "name": "queue-mon",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Blayne Chard <blayne@chard.com>",
+  "license": "MIT",
+  "dependencies": {
+    "pino": "^5.13.2"
+  }
+}
