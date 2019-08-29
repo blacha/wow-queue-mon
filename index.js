@@ -1,9 +1,23 @@
 const cp = require('child_process');
 const pino = require('pino')();
+const fs = require('fs');
 
 const sleep = time => new Promise(resolve => setTimeout(resolve, time));
 
-const history = {};
+const history = [];
+const HISTORY_FILE = './history.json'
+
+try {
+    const old = JSON.parse(fs.readFileSync(HISTORY_FILE));
+    for (const o of old) {
+        history.push(o)
+    }
+    pino.info({
+        history: history.length
+    }, 'HistoryRead');
+} catch (e) {
+    console.log(e)
+}
 
 function getLargestNumbers(text) {
     const matches = text.match(/(\d+)/g)
@@ -47,7 +61,49 @@ async function getTextData() {
         eta
     }, 'Image');
 
+    history.push({
+        time: new Date().toISOString(),
+        position,
+        eta
+    })
 
+    if (history.length > 1000) {
+        history.shift();
+    }
+
+    await fs.promises.writeFile(HISTORY_FILE, JSON.stringify(history, null, 2));
+}
+
+function printStats() {
+    const currentTime = Date.now()
+
+    const TIME_LIST = [1, 5, 10, 30, 60].map(c => c * 60)
+    const times = {}
+    const CURRENT = history[history.length - 1]
+    for (let i = history.length - 1; i >= 0; i--) {
+        const obj = history[i];
+        const timeStamp = new Date(obj.time);
+        const timeAgo = Math.floor((currentTime - timeStamp) / 1000);
+        if (obj.position < CURRENT.position) {
+            continue;
+        }
+
+        for (const t of TIME_LIST) {
+            if (times[t] != null) {
+                continue;
+            }
+            if (timeAgo > t) {
+                times[t] = {
+                    diff: obj.position - CURRENT.position,
+                    position: obj.position
+                }
+            }
+        }
+    }
+
+    pino.info(
+        times, 'Changes'
+    )
 }
 
 const SLEEP_DELAY_MS = 2 * 1000;
@@ -55,6 +111,8 @@ const SLEEP_DELAY_MS = 2 * 1000;
 async function main() {
     while (true) {
         const startTime = Date.now();
+        printStats();
+
         try {
             await getTextData();
         } catch (e) {
@@ -68,6 +126,7 @@ async function main() {
             }, 'Sleep')
             await sleep(SLEEP_DELAY_MS);
         }
+
     }
 }
 
